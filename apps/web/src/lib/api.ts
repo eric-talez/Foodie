@@ -1,4 +1,4 @@
-import type { ApiError, DeliveryMode, LocationSummary, RestaurantMenu, RestaurantSearchResponse } from "./types";
+import type { ApiError, DeliveryMode, LocationSummary, QuoteRequest, QuoteResponse, RestaurantMenu, RestaurantSearchResponse } from "./types";
 
 const locationError = "Unable to load locations. Please try again later.";
 
@@ -23,6 +23,30 @@ function validMenu(body: unknown, slug: string): body is RestaurantMenu {
 }
 
 export const api = {
+  async createQuote(request: QuoteRequest, signal?: AbortSignal): Promise<QuoteResponse> {
+    const fallback = "Unable to load pricing. Please try again.";
+    // Copy only server pricing inputs; persisted names and price hints are untrusted.
+    const payload: QuoteRequest = {
+      locationId: request.locationId, restaurantId: request.restaurantId, deliveryMode: request.deliveryMode,
+      lines: request.lines.map(({ lineId, menuItemId, quantity, modifierOptionIds }) => ({ lineId, menuItemId, quantity, modifierOptionIds })),
+    };
+    const response = await fetch("/api/v1/quotes", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal,
+    });
+    const body: unknown = await response.json().catch(() => null);
+    if (!response.ok) {
+      if (record(body) && text(body.code) && text(body.message) && Array.isArray(body.details)) {
+        throw Object.assign(new Error(body.message), { code: body.code, message: body.message, details: body.details });
+      }
+      throw new Error(fallback);
+    }
+    if (!record(body) || body.currency !== "USD" || body.demo !== true || body.deliveryMode !== request.deliveryMode ||
+        ![body.subtotalCents, body.serviceFeeCents, body.deliveryFeeCents, body.estimatedTaxCents, body.totalCents,
+          body.estimatedMinutesMin, body.estimatedMinutesMax].every(nonnegativeInteger) ||
+        (body.estimatedMinutesMax as number) < (body.estimatedMinutesMin as number)) throw new Error(fallback);
+    return body as unknown as QuoteResponse;
+  },
+
   async getRestaurant(slug: string): Promise<RestaurantMenu> {
     const fallback = "Unable to load menu. Please try again.";
     const response = await fetch(`/api/v1/restaurants/${encodeURIComponent(slug)}`);

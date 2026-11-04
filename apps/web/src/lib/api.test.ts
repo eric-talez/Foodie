@@ -25,3 +25,31 @@ test.each(["Bad gateway", JSON.stringify({ message: "", code: 123 }), "null"])("
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body, { status: 502 })));
   await expect(api.getLocations()).rejects.toThrow("Unable to load locations. Please try again later.");
 });
+
+const quoteRequest = { locationId: "location", restaurantId: "restaurant", deliveryMode: "GROUPED" as const, lines: [{ lineId: "line", menuItemId: "item", quantity: 1, modifierOptionIds: ["option"] }] };
+const quoteResponse = { currency: "USD", subtotalCents: 1200, serviceFeeCents: 60, deliveryFeeCents: 199, estimatedTaxCents: 108, totalCents: 1567, deliveryMode: "GROUPED", estimatedMinutesMin: 45, estimatedMinutesMax: 60, demo: true };
+
+test("quote transport whitelists request fields and propagates cancellation", async () => {
+  const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(quoteResponse)));
+  vi.stubGlobal("fetch", fetch);
+  const controller = new AbortController();
+  const untrustedRequest = { ...quoteRequest, totalCents: 1, lines: [{ ...quoteRequest.lines[0], unitPriceCents: 1 }] };
+  await expect(api.createQuote(untrustedRequest, controller.signal)).resolves.toEqual(quoteResponse);
+  expect(fetch).toHaveBeenCalledWith("/api/v1/quotes", { method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal, body: JSON.stringify(quoteRequest) });
+});
+
+test.each([
+  null, { ...quoteResponse, currency: "EUR" }, { ...quoteResponse, demo: false },
+  { ...quoteResponse, totalCents: -1 }, { ...quoteResponse, subtotalCents: 1.5 },
+  { ...quoteResponse, totalCents: Number.MAX_SAFE_INTEGER + 1 }, { ...quoteResponse, serviceFeeCents: undefined },
+  { ...quoteResponse, deliveryMode: "DIRECT" }, { ...quoteResponse, estimatedMinutesMax: 40 },
+])("rejects malformed or mismatched quote data: %j", async (body) => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(body))));
+  await expect(api.createQuote(quoteRequest)).rejects.toThrow(/unable to load pricing/i);
+});
+
+test("preserves unavailable line details from the quote endpoint", async () => {
+  const error = { code: "ITEM_UNAVAILABLE", message: "An item is unavailable", details: [{ lineId: "line", menuItemId: "item", reason: "Inactive" }] };
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(error), { status: 409 })));
+  await expect(api.createQuote(quoteRequest)).rejects.toMatchObject(error);
+});

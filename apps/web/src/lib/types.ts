@@ -13,6 +13,26 @@ export interface ApiError {
 
 export type DeliveryMode = "GROUPED" | "DIRECT";
 
+export interface QuoteRequest {
+  locationId: string;
+  restaurantId: string;
+  deliveryMode: DeliveryMode;
+  lines: { lineId: string; menuItemId: string; quantity: number; modifierOptionIds: string[] }[];
+}
+
+export interface QuoteResponse {
+  currency: "USD";
+  subtotalCents: number;
+  serviceFeeCents: number;
+  deliveryFeeCents: number;
+  estimatedTaxCents: number;
+  totalCents: number;
+  deliveryMode: DeliveryMode;
+  estimatedMinutesMin: number;
+  estimatedMinutesMax: number;
+  demo: true;
+}
+
 export interface RestaurantSummary {
   id: string;
   slug: string;

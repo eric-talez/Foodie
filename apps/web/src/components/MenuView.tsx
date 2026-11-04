@@ -10,7 +10,7 @@ import { StatusMessage } from "./StatusMessage";
 
 const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
-function CartSummary() {
+function CartSummary({ locationId, mode }: { locationId: string; mode: DeliveryMode }) {
   const { state, ready, dispatch } = useCart();
   const subtotal = state.lines.reduce((sum, line) => sum + (line.unitPriceCents + line.modifierTotalCents) * line.quantity, 0);
   return <aside className="cart-summary" aria-labelledby="cart-title">
@@ -36,6 +36,7 @@ function CartSummary() {
       <p className="cart-subtotal">Estimated food subtotal: {dollars(subtotal)}</p>
       <p className="estimate-note">Delivery fees are calculated later.</p>
       <button className="cart-remove" type="button" onClick={() => dispatch({ type: "CLEAR" })}>Clear cart</button>
+      <Link className="cart-pricing-link" href={`/cart?${new URLSearchParams({ locationId, mode })}`}>Review cart pricing</Link>
     </>}
   </aside>;
 }
@@ -83,7 +84,7 @@ export function MenuView({ slug, locationId, mode }: { slug: string; locationId:
           </section>)}
         </>}
       </div>
-      <CartSummary />
+      <CartSummary locationId={locationId} mode={mode} />
     </div>
   </>;
 }

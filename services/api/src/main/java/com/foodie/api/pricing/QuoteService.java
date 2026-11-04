@@ -33,6 +33,10 @@ public class QuoteService {
     }
 
     public QuoteResponse quote(QuoteRequest request) {
+        return calculate(request).customerQuote();
+    }
+
+    Calculation calculate(QuoteRequest request) {
         validateRequest(request);
         var restaurant = restaurants.findById(request.restaurantId()).orElseThrow(QuoteExceptions.InvalidCart::new);
         var unavailable = new ArrayList<QuoteExceptions.UnavailableLine>();
@@ -79,9 +83,13 @@ public class QuoteService {
         long tax = MoneyMath.percentageCents(subtotal, policy.demoTaxBasisPoints());
         long deliveryFee = (long) policy.groupedDeliveryFeeCents() + (grouped ? 0 : policy.directSurchargeCents());
         long total = Math.addExact(Math.addExact(subtotal, serviceFee), Math.addExact(tax, deliveryFee));
-        return new QuoteResponse("USD", subtotal, serviceFee, deliveryFee, tax, total, request.deliveryMode(),
+        var customerQuote = new QuoteResponse("USD", subtotal, serviceFee, deliveryFee, tax, total, request.deliveryMode(),
                 grouped ? 45 : 25, grouped ? 60 : 35, policy.demo());
+        return new Calculation(customerQuote,
+                MoneyMath.percentageCents(subtotal, policy.restaurantCommissionBasisPoints()));
     }
+
+    record Calculation(QuoteResponse customerQuote, long restaurantCommissionCents) {}
 
     private void validateRequest(QuoteRequest request) {
         if (request == null || request.locationId() == null || request.restaurantId() == null

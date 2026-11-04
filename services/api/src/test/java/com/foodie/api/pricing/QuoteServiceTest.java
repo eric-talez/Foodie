@@ -32,6 +32,25 @@ class QuoteServiceTest {
     }
 
     @Test
+    void calculatesInternalCommissionFromValidatedSubtotalAndActivePolicyWithoutChangingCustomerQuote() {
+        var request = fixture.request(DeliveryMode.GROUPED, fixture.line(1));
+        var calculation = fixture.service.calculate(request);
+        assertThat(calculation.restaurantCommissionCents()).isEqualTo(420);
+        assertThat(calculation.customerQuote().subtotalCents()).isEqualTo(3500);
+        assertThat(calculation.customerQuote()).isEqualTo(fixture.service.quote(request));
+        assertThat(calculation.customerQuote().totalCents()).isEqualTo(4689);
+
+        ReflectionTestUtils.setField(fixture.policy, "restaurantCommissionBasisPoints", 1500);
+        assertThat(fixture.service.calculate(request).restaurantCommissionCents()).isEqualTo(525);
+
+        fixture.addGroup(0, 1);
+        var option = fixture.addOption(200, true);
+        var modified = fixture.service.calculate(fixture.request(DeliveryMode.GROUPED, fixture.line(2, option.id())));
+        assertThat(modified.customerQuote().subtotalCents()).isEqualTo(7400);
+        assertThat(modified.restaurantCommissionCents()).isEqualTo(1110);
+    }
+
+    @Test
     void appliesModifierPricesPerUnitAndCapsServiceFeeBeforeAddingSubtotalTaxAndDelivery() {
         fixture.addGroup(0, 2);
         var option = fixture.addOption(200, true);

@@ -75,7 +75,10 @@ public class QuoteService {
         var eligibility = serviceArea.evaluate(request.locationId(), restaurant);
         boolean grouped = request.deliveryMode() == DeliveryMode.GROUPED;
         if (!(grouped ? eligibility.groupedAvailable() : eligibility.directAvailable())) {
-            throw new QuoteExceptions.DeliveryUnavailable();
+            var availableModes = new ArrayList<DeliveryMode>();
+            if (eligibility.groupedAvailable()) availableModes.add(DeliveryMode.GROUPED);
+            if (eligibility.directAvailable()) availableModes.add(DeliveryMode.DIRECT);
+            throw new QuoteExceptions.DeliveryUnavailable(availableModes);
         }
         var policy = policies.findByActiveTrue().orElseThrow(() -> new IllegalStateException("No active fee policy"));
         long serviceFee = Math.min(MoneyMath.percentageCents(subtotal, policy.serviceFeeBasisPoints()),

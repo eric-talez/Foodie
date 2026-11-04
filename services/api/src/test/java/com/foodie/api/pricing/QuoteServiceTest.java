@@ -162,7 +162,7 @@ class QuoteServiceTest {
     @Test
     void enforcesSelectedDeliveryModeAndCoverage() {
         ReflectionTestUtils.setField(fixture.restaurant, "longitude", 0.0724);
-        deliveryUnavailable(DeliveryMode.GROUPED);
+        deliveryUnavailable(DeliveryMode.GROUPED, DeliveryMode.DIRECT);
         assertThat(fixture.service.quote(fixture.request(DeliveryMode.DIRECT, fixture.line(1)))) .isNotNull();
         ReflectionTestUtils.setField(fixture.restaurant, "longitude", 0.09);
         deliveryUnavailable(DeliveryMode.DIRECT);
@@ -178,9 +178,10 @@ class QuoteServiceTest {
     private void unavailable(QuoteRequest request) {
         assertThatThrownBy(() -> fixture.service.quote(request)).isInstanceOf(QuoteExceptions.ItemUnavailable.class);
     }
-    private void deliveryUnavailable(DeliveryMode mode) {
+    private void deliveryUnavailable(DeliveryMode mode, DeliveryMode... availableModes) {
         assertThatThrownBy(() -> fixture.service.quote(fixture.request(mode, fixture.line(1))))
-                .isInstanceOf(QuoteExceptions.DeliveryUnavailable.class);
+                .isInstanceOf(QuoteExceptions.DeliveryUnavailable.class)
+                .hasFieldOrPropertyWithValue("availableDeliveryModes", Arrays.asList(availableModes));
     }
 }
 

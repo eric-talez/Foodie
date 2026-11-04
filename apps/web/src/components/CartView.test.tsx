@@ -77,6 +77,49 @@ test("identifies unavailable variants without dropping any lines and requires re
   expect(screen.queryByRole("button", { name: "Retry pricing" })).not.toBeInTheDocument();
 });
 
+test("recovers a saved grouped cart by switching its URL to the offered mode and fetching fresh pricing", async () => {
+  vi.mocked(fetch).mockResolvedValueOnce(response({ code: "DELIVERY_UNAVAILABLE", message: "Grouped delivery is unavailable.", details: [{ availableDeliveryModes: ["DIRECT"] }] }, 422));
+  const view = mount();
+  const switchMode = await screen.findByRole("button", { name: "Switch to Direct delivery" });
+  expect(screen.queryByRole("region", { name: "Demo pricing" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Continue to checkout preview" })).toBeDisabled();
+  fireEvent.click(switchMode);
+  expect(push).toHaveBeenCalledWith(`/cart?locationId=${locationId}&mode=DIRECT`);
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(screen.getByText("Loading server pricing…")).toBeVisible();
+  expect(JSON.parse(localStorage.getItem(CART_STORAGE_KEY)!).state.lines).toEqual([line]);
+  let finish!: (value: Response) => void;
+  vi.mocked(fetch).mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+  view.rerender(<CartProvider><CartView locationId={locationId} mode="DIRECT" /></CartProvider>);
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+  const request = JSON.parse(vi.mocked(fetch).mock.calls[1][1]!.body as string);
+  expect(request).toEqual({ locationId, restaurantId: "restaurant", deliveryMode: "DIRECT", lines: [{ lineId: line.lineId, menuItemId: "bowl", quantity: 1, modifierOptionIds: ["tofu"] }] });
+  expect(screen.queryByRole("region", { name: "Demo pricing" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Continue to checkout preview" })).toBeDisabled();
+  await act(async () => { finish(response({ ...quote, deliveryMode: "DIRECT", deliveryFeeCents: 1149, totalCents: 2517, estimatedMinutesMin: 25, estimatedMinutesMax: 35 })); });
+  expect(await screen.findByText("$25.17")).toBeVisible();
+  expect(screen.getByText("Direct delivery")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Continue to checkout preview" }));
+  expect(push).toHaveBeenLastCalledWith(`/checkout-preview?locationId=${locationId}&mode=DIRECT`);
+});
+
+test.each([
+  { code: "DELIVERY_UNAVAILABLE", details: [{ availableDeliveryModes: [] }] },
+  { code: "DELIVERY_UNAVAILABLE", details: [{ availableDeliveryModes: ["GROUPED", "FAST", null] }] },
+  { code: "DELIVERY_UNAVAILABLE", details: [{ availableDeliveryModes: "DIRECT" }] },
+  { code: "DELIVERY_UNAVAILABLE", details: [] },
+  { code: "LOCATION_NOT_FOUND", details: [] },
+  { code: "ITEM_UNAVAILABLE", details: [{ availableDeliveryModes: ["DIRECT"] }] },
+])("does not invent an alternative for unavailable, unknown, or malformed modes: %j", async (error) => {
+  vi.mocked(fetch).mockResolvedValueOnce(response({ ...error, message: "Delivery is unavailable." }, 422));
+  mount();
+  await screen.findByRole("alert");
+  expect(screen.queryByRole("button", { name: /Switch to/ })).not.toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Harvest bowl" })).toBeVisible();
+  expect(screen.getByRole("link", { name: "Choose another location" })).toHaveAttribute("href", "/");
+  expect(screen.getByRole("button", { name: "Continue to checkout preview" })).toBeDisabled();
+});
+
 test("removing a line requotes the retained lines; removing the last line disables checkout", async () => {
   localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ version: 1, state: { restaurantId: "restaurant", lines: [line, { ...line, lineId: '["side",[]]', menuItemId: "side", itemName: "Side salad", modifierOptionIds: [], modifierLabels: [] }] } }));
   mount(); await screen.findByText("$15.67");

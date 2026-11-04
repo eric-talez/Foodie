@@ -2,6 +2,7 @@ package com.foodie.api.pricing;
 
 import java.util.List;
 import java.util.UUID;
+import com.foodie.api.servicearea.DeliveryMode;
 
 public final class QuoteExceptions {
     private QuoteExceptions() {}
@@ -10,8 +11,14 @@ public final class QuoteExceptions {
         public InvalidCart() { super("Cart contains invalid items or selections"); }
     }
     public static final class DeliveryUnavailable extends RuntimeException {
-        public DeliveryUnavailable() { super("Selected delivery mode is unavailable for this location and restaurant"); }
+        private final List<DeliveryMode> availableDeliveryModes;
+        public DeliveryUnavailable(List<DeliveryMode> availableDeliveryModes) {
+            super("Selected delivery mode is unavailable for this location and restaurant");
+            this.availableDeliveryModes = List.copyOf(availableDeliveryModes);
+        }
+        public List<DeliveryMode> availableDeliveryModes() { return availableDeliveryModes; }
     }
+    public record DeliveryAlternatives(List<DeliveryMode> availableDeliveryModes) {}
     public record UnavailableLine(String lineId, UUID menuItemId, String reason) {}
 
     public static final class ItemUnavailable extends RuntimeException {

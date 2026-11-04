@@ -35,7 +35,8 @@ public class ApiExceptionHandler {
     @ExceptionHandler(QuoteExceptions.DeliveryUnavailable.class)
     public ResponseEntity<ApiError> deliveryUnavailable(QuoteExceptions.DeliveryUnavailable exception) {
         return ResponseEntity.unprocessableContent()
-                .body(new ApiError("DELIVERY_UNAVAILABLE", exception.getMessage(), List.of()));
+                .body(new ApiError("DELIVERY_UNAVAILABLE", exception.getMessage(),
+                        List.of(new QuoteExceptions.DeliveryAlternatives(exception.availableDeliveryModes()))));
     }
 
     @ExceptionHandler(ApiError.NotFoundException.class)

@@ -123,7 +123,7 @@ Start the API again to apply migrations and seeds. These reset commands are oper
 
 1. At desktop width and a narrow mobile viewport (for example 390px), check readable cards, menu, dialog, cart, and preview with no horizontal overflow or clipped controls.
 2. Choose Santa Clara Central. Verify Orchard's grouped card shows $6.99 / 45–60 min. Switch Direct and verify $11.49 / 25–35 min. Open a menu and use Back/Forward; location and mode must remain in the URL.
-3. Customize Citrus Chicken Bowl. Add must remain disabled until one required base is selected. Add Brown rice, review cart pricing, set quantity to two, and confirm the five separate server lines and $40.05 grouped total.
+3. Switch back to Grouped before opening Orchard's menu. Customize Citrus Chicken Bowl. Add must remain disabled until one required base is selected. Add Brown rice, review cart pricing, set quantity to two, and confirm the five separate server lines and $40.05 grouped total.
 4. Open checkout preview. Confirm **Demo pricing**, selected items, and **Ordering is not live yet**. There must be no payment collection or order submission control. Refresh preview and confirm it returns to cart for current pricing.
 5. Choose the San Francisco outside-coverage sample. Verify a clear coverage message, no restaurant cards, and a working location recovery link.
 6. Repeat location → menu → customizer → cart using Tab, arrows, Space, and Enter only. Check visible focus, dialog focus containment, Escape dismissal, restored trigger focus, and labelled quantity/removal controls.

@@ -10,15 +10,18 @@ import type { DeliveryMode, QuoteRequest } from "../lib/types";
 import { formatCents, QuoteSummary } from "./QuoteSummary";
 import { StatusMessage } from "./StatusMessage";
 
-interface QuoteFailure { message: string; unavailable: boolean; lineIds: string[]; itemIds: string[] }
+interface QuoteFailure { message: string; unavailable: boolean; lineIds: string[]; itemIds: string[]; availableModes: DeliveryMode[] }
 function quoteFailure(reason: unknown): QuoteFailure {
   const error = reason as { code?: string; message?: string; details?: unknown[] } | null;
   const unavailable = error?.code === "ITEM_UNAVAILABLE";
-  const details = unavailable && Array.isArray(error?.details) ? error.details.filter((value): value is Record<string, unknown> => !!value && typeof value === "object") : [];
+  const details = Array.isArray(error?.details) ? error.details.filter((value): value is Record<string, unknown> => !!value && typeof value === "object") : [];
   return {
     message: reason instanceof Error ? reason.message : "Unable to load pricing. Please try again.", unavailable,
     lineIds: details.flatMap((value) => typeof value.lineId === "string" ? [value.lineId] : []),
     itemIds: details.flatMap((value) => typeof value.menuItemId === "string" && typeof value.lineId !== "string" ? [value.menuItemId] : []),
+    availableModes: error?.code === "DELIVERY_UNAVAILABLE" ? [...new Set(details.flatMap((value) =>
+      Array.isArray(value.availableDeliveryModes) ? value.availableDeliveryModes.filter((mode): mode is DeliveryMode => mode === "GROUPED" || mode === "DIRECT") : [],
+    ))] : [],
   };
 }
 
@@ -49,6 +52,11 @@ export function CartView({ locationId, mode }: { locationId: string; mode: Deliv
   const successful = current && !current.error && quote?.fingerprint === fingerprint ? quote : null;
   const query = new URLSearchParams({ locationId, mode });
   function retry() { setQuote(null); setAttempt((value) => value + 1); }
+  function switchMode(nextMode: DeliveryMode) {
+    setQuote(null);
+    setResult(null);
+    router.push(`/cart?${new URLSearchParams({ locationId, mode: nextMode })}`);
+  }
 
   return <>
     <h1>Your cart</h1>
@@ -78,6 +86,9 @@ export function CartView({ locationId, mode }: { locationId: string; mode: Deliv
           <StatusMessage error>{current.error.message}{current.error.unavailable && <>
             <span> Unavailable: {state.lines.filter((line) => current.error!.lineIds.includes(line.lineId) || current.error!.itemIds.includes(line.menuItemId)).map((line) => `${line.itemName}${line.modifierLabels.length ? ` (${line.modifierLabels.join(", ")})` : ""}`).join(", ") || "one or more cart items"}. Please remove or reconfigure unavailable items before continuing.</span>
           </>}</StatusMessage>
+          {current.error.availableModes.filter((availableMode) => availableMode !== mode).map((availableMode) =>
+            <button key={availableMode} type="button" onClick={() => switchMode(availableMode)}>Switch to {availableMode === "DIRECT" ? "Direct" : "Grouped"} delivery</button>,
+          )}
           {!current.error.unavailable && <button type="button" onClick={retry}>Retry pricing</button>}
         </> : successful && <QuoteSummary quote={successful.data} />}
       </div>

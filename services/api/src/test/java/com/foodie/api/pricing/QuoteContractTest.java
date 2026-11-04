@@ -67,11 +67,32 @@ class QuoteContractTest {
     }
 
     @Test
+    void unavailableGroupedDeliveryOffersOnlyTheAvailableDirectMode() throws Exception {
+        ReflectionTestUtils.setField(fixture.restaurant, "longitude", 0.0724);
+        var error = error(body(), 422, "DELIVERY_UNAVAILABLE");
+        assertThat(error.path("details").size()).isEqualTo(1);
+        var detail = error.path("details").get(0);
+        assertThat(detail.propertyNames()).containsExactly("availableDeliveryModes");
+        assertThat(detail.path("availableDeliveryModes").size()).isEqualTo(1);
+        assertThat(detail.path("availableDeliveryModes").get(0).asString()).isEqualTo("DIRECT");
+    }
+
+    @Test
     void unavailableDeliveryAndUnknownLocationsRetainTheirPublicErrors() throws Exception {
         ReflectionTestUtils.setField(fixture.location, "inCoverage", false);
-        error(body(), 422, "DELIVERY_UNAVAILABLE");
-        error(body().replace(fixture.locationId.toString(), java.util.UUID.randomUUID().toString()),
+        var outside = error(body(), 422, "DELIVERY_UNAVAILABLE");
+        assertThat(outside.path("details").size()).isEqualTo(1);
+        assertThat(outside.path("details").get(0).path("availableDeliveryModes").isArray()).isTrue();
+        assertThat(outside.path("details").get(0).path("availableDeliveryModes").isEmpty()).isTrue();
+        var unknown = error(body().replace(fixture.locationId.toString(), java.util.UUID.randomUUID().toString()),
                 404, "LOCATION_NOT_FOUND");
+        assertThat(unknown.path("details").isEmpty()).isTrue();
+        ReflectionTestUtils.setField(fixture.location, "inCoverage", true);
+        ReflectionTestUtils.setField(fixture.restaurant, "longitude", 0.09);
+        var tooFar = error(body(), 422, "DELIVERY_UNAVAILABLE");
+        assertThat(tooFar.path("details").size()).isEqualTo(1);
+        assertThat(tooFar.path("details").get(0).path("availableDeliveryModes").isArray()).isTrue();
+        assertThat(tooFar.path("details").get(0).path("availableDeliveryModes").isEmpty()).isTrue();
     }
 
     private String body() {

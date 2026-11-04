@@ -15,7 +15,8 @@ function validMenu(body: unknown, slug: string): body is RestaurantMenu {
       (item.imageReference === null || typeof item.imageReference === "string") &&
       Array.isArray(item.modifierGroups) && item.modifierGroups.every((group) => record(group) && text(group.id) && text(group.name) &&
         nonnegativeInteger(group.minSelections) && nonnegativeInteger(group.maxSelections) && group.maxSelections >= group.minSelections &&
-        Array.isArray(group.options) && group.options.every((option) => record(option) && text(option.id) && text(option.label) && nonnegativeInteger(option.priceDeltaCents))
+        Array.isArray(group.options) && group.minSelections <= group.options.length &&
+        group.options.every((option) => record(option) && text(option.id) && text(option.label) && nonnegativeInteger(option.priceDeltaCents))
       )
     )
   );

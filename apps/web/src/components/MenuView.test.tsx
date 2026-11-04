@@ -64,6 +64,20 @@ test.each([
   expect(screen.queryByRole("button", { name: /customize/i })).not.toBeInTheDocument();
 });
 
+test.each([2, 1])("requires enough active options for a group minimum of %s while allowing a larger maximum", async (minimum) => {
+  vi.mocked(fetch).mockResolvedValue(response({ ...menu, categories: [{ ...menu.categories[0], items: [{
+    ...menu.categories[0].items[0], modifierGroups: [{ id: "protein", name: "Protein", minSelections: minimum, maxSelections: 2,
+      options: [{ id: "tofu", label: "Tofu", priceDeltaCents: 0 }] }],
+  }] }] }));
+  mount();
+  if (minimum === 2) {
+    expect(await screen.findByRole("alert")).toHaveTextContent(/unable to load menu/i);
+    expect(screen.queryByRole("button", { name: /customize/i })).not.toBeInTheDocument();
+  } else {
+    expect(await screen.findByRole("button", { name: "Customize Harvest bowl" })).toBeEnabled();
+  }
+});
+
 test("ignores stale detail responses on navigation", async () => {
   let finish!: (value: Response) => void;
   vi.mocked(fetch).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; })).mockResolvedValue(response({ ...menu, slug: "willow", name: "Willow" }));

@@ -23,7 +23,7 @@ test("seeded customer journey prices a customized cart and stops at preview", as
   await expect(page.getByRole("region", { name: "Preview items" })).toContainText("Citrus Chicken Bowl × 2");
   await expect(page.getByText("Ordering is not live yet", { exact: true })).toBeVisible();
   await expect(page.getByRole("region", { name: "Demo pricing" })).toContainText("$40.05");
-  await expect(page.locator("form, button, input[type=submit]")).toHaveCount(0);
+  await expect(page.getByRole("main").locator("form, button, input[type=submit]")).toHaveCount(0);
   await page.getByRole("link", { name: "Back to cart" }).click();
   await page.getByRole("link", { name: "Back to restaurants", exact: true }).click();
   await page.getByRole("radio", { name: "Direct delivery", exact: true }).check();

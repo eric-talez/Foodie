@@ -78,7 +78,7 @@ test("a quote failure removes official totals, preserves items, and permits retr
     body: JSON.stringify({ code: "SERVICE_UNAVAILABLE", message: "Pricing is temporarily unavailable.", details: [] }),
   }));
   await page.getByRole("combobox", { name: "Quantity for Citrus Chicken Bowl (Brown rice)" }).selectOption("2");
-  await expect(page.getByRole("alert")).toContainText("Pricing is temporarily unavailable.");
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("Pricing is temporarily unavailable.");
   await expect(page.getByRole("region", { name: "Demo pricing" })).toHaveCount(0);
   await expect(page.getByText("Total", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Cart items" })).toContainText("Citrus Chicken Bowl");

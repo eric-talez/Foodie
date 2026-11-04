@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "pnpm --filter @foodie/web dev",
     "build": "pnpm --filter @foodie/web build",
-    "test": "pnpm --filter @foodie/web test"
+    "test": "pnpm --filter @foodie/web test",
+    "test:e2e": "pnpm --filter @foodie/web test:e2e"
   }
 }

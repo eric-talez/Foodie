@@ -10,3 +10,26 @@ export interface ApiError {
   message: string;
   details: unknown[];
 }
+
+export type DeliveryMode = "GROUPED" | "DIRECT";
+
+export interface RestaurantSummary {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  city: string;
+  cuisine: string;
+  distanceMiles: number;
+  deliveryMode: DeliveryMode;
+  deliveryFeeCents: number;
+  estimatedMinutesMin: number;
+  estimatedMinutesMax: number;
+}
+
+export interface RestaurantSearchResponse {
+  locationId: string;
+  inCoverage: boolean;
+  deliveryMode: DeliveryMode;
+  restaurants: RestaurantSummary[];
+}

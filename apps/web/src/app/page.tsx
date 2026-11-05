@@ -20,8 +20,8 @@ export default function Home() {
         </div>
       </main>
       <footer className="site-footer container">
-        <p>Santa Clara &amp; San Jose demo</p>
-        <p>Ordering is not live yet. Sample locations and menus only.</p>
+        <p>Santa Clara &amp; San Jose</p>
+        <p>Ordering is not live yet.</p>
       </footer>
     </>
   );

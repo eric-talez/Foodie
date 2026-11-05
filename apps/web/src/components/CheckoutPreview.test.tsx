@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import PreviewPage from "../app/checkout-preview/page";
 import { CartProvider, useCart } from "../features/cart/CartProvider";
 import { CART_STORAGE_KEY } from "../features/cart/cartStorage";
+import { RuntimeModeContext } from "../lib/RuntimeModeContext";
 import { CartView } from "./CartView";
 import { CheckoutPreview } from "./CheckoutPreview";
 
@@ -20,12 +21,14 @@ beforeEach(() => {
 afterEach(() => { cleanup(); localStorage.clear(); vi.unstubAllGlobals(); });
 function ChangeCart() { const { dispatch } = useCart(); return <button onClick={() => dispatch({ type: "SET_QUANTITY", lineId: line.lineId, quantity: 2 })}>Change cart</button>; }
 
-test("only exact successful inputs enter preview and repeat every disclosure without submission", async () => {
-  const view = render(<CartProvider><CartView locationId={locationId} mode="DIRECT" /></CartProvider>);
+test.each([["DEMO", "Demo pricing"], ["PILOT", "Estimated pricing"]] as const)("%s repeats pricing and disclosures without submission", async (runtimeMode, pricingLabel) => {
+  const view = render(<RuntimeModeContext.Provider value={runtimeMode}><CartProvider><CartView locationId={locationId} mode="DIRECT" /></CartProvider></RuntimeModeContext.Provider>);
   await screen.findByText("$18.67");
-  view.rerender(<CartProvider><CheckoutPreview locationId={locationId} mode="DIRECT" /><ChangeCart /></CartProvider>);
+  expect(screen.getByRole("heading", { name: pricingLabel })).toBeVisible();
+  view.rerender(<RuntimeModeContext.Provider value={runtimeMode}><CartProvider><CheckoutPreview locationId={locationId} mode="DIRECT" /><ChangeCart /></CartProvider></RuntimeModeContext.Provider>);
   expect(screen.getByRole("heading", { name: "Checkout preview" })).toBeVisible();
-  expect(screen.getByRole("heading", { name: "Demo pricing" })).toBeVisible();
+  expect(screen.getByRole("heading", { name: pricingLabel })).toBeVisible();
+  if (runtimeMode === "PILOT") expect(view.container).not.toHaveTextContent(/\bdemo\b/i);
   expect(screen.getByText("Ordering is not live yet")).toBeVisible();
   for (const [label, amount] of [["Food subtotal", "$12.00"], ["Service fee", "$0.60"], ["Delivery fee", "$4.99"], ["Estimated tax", "$1.08"], ["Total", "$18.67"]]) expect(screen.getByText(label).nextElementSibling).toHaveTextContent(amount);
   expect(screen.getByText("Direct delivery")).toBeVisible();

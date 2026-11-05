@@ -12,6 +12,7 @@ public class TestFoodieApiApplication {
     public static void main(String[] args) {
         SpringApplication.from(FoodieApiApplication::main)
                 .with(TestFoodieApiApplication.class)
+                .withAdditionalProfiles("demo")
                 .run(args);
     }
 

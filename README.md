@@ -133,4 +133,4 @@ Start the API again to apply migrations and seeds. These reset commands are oper
 
 No accounts, authentication, subscription billing, live orders, payments, dispatch, driver/vendor portal, live geocoding/routing, or real customer address collection. No cross-tab cart synchronization or server cart persistence. This is a local demo, not a production service.
 
-The required **Next.js 16.4.0 pin produced a known-security-vulnerability warning during the initial build**. A later unchanged build passed; that does not resolve the warning. Review the package's current advisories and approve an upgrade before deployment. Task 10 retains the required version pin and does not add deployment/CI configuration.
+**Next.js 16.4.5 is the reviewed stable security release as of 2026-11-04**, replacing the 16.4.0 pin that produced a known-security-vulnerability warning during the initial build. Check current advisories again before deployment.

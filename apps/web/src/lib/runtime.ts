@@ -1,10 +1,15 @@
+import "server-only";
+import { parseApiOrigin } from "./apiOrigin";
+
 export type RuntimeMode = "DEMO" | "PILOT";
 
 export async function getRuntime(): Promise<{ mode: RuntimeMode; orderingEnabled: boolean }> {
-  const origin = process.env.FOODIE_API_ORIGIN ?? "http://localhost:8080";
+  const fallback = { mode: "DEMO", orderingEnabled: false } as const;
+  const origin = parseApiOrigin(process.env.FOODIE_BUILD_API_ORIGIN);
+  if (!origin) return fallback;
   try {
     const response = await fetch(`${origin}/api/v1/runtime`, {
-      cache: "no-store", signal: AbortSignal.timeout(3000),
+      cache: "no-store", redirect: "error", signal: AbortSignal.timeout(3000),
     });
     if (response.ok) {
       const body: unknown = await response.json();
@@ -17,5 +22,5 @@ export async function getRuntime(): Promise<{ mode: RuntimeMode; orderingEnabled
   } catch {
     // A missing runtime response must not prevent rendering the preview.
   }
-  return { mode: "DEMO", orderingEnabled: false };
+  return fallback;
 }

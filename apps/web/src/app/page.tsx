@@ -1,4 +1,5 @@
 import { LocationPicker } from "../components/LocationPicker";
+import { SiteFooter } from "../components/SiteFooter";
 import { SiteHeader } from "../components/SiteHeader";
 
 export default function Home() {
@@ -19,10 +20,7 @@ export default function Home() {
           <LocationPicker />
         </div>
       </main>
-      <footer className="site-footer container">
-        <p>Santa Clara &amp; San Jose</p>
-        <p>Ordering is not live yet.</p>
-      </footer>
+      <SiteFooter />
     </>
   );
 }

@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
+import { parseApiOrigin } from "./src/lib/apiOrigin";
+
+const apiOrigin = parseApiOrigin(process.env.FOODIE_API_ORIGIN ?? "http://localhost:8080");
+if (!apiOrigin) throw new Error("FOODIE_API_ORIGIN must be a plain HTTP(S) origin");
 
 const nextConfig: NextConfig = {
+  // The server descriptor lookup must use the same build-time origin as the rewrite.
+  env: { FOODIE_BUILD_API_ORIGIN: apiOrigin },
   async headers() {
     const csp = [
       "default-src 'self'",
@@ -26,7 +32,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: `${process.env.FOODIE_API_ORIGIN ?? "http://localhost:8080"}/api/:path*`,
+        destination: `${apiOrigin}/api/:path*`,
       },
     ];
   },

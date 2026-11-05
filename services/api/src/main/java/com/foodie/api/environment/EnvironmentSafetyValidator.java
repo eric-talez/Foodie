@@ -1,31 +1,42 @@
 package com.foodie.api.environment;
 
-import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.SmartInitializingSingleton;
+import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.context.properties.bind.Bindable;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 @Component
 @EnableConfigurationProperties(FoodieEnvironmentProperties.class)
-public class EnvironmentSafetyValidator implements SmartInitializingSingleton {
+public class EnvironmentSafetyValidator {
 
-    private final FoodieEnvironmentProperties properties;
-    private final Environment environment;
-
-    public EnvironmentSafetyValidator(FoodieEnvironmentProperties properties, Environment environment) {
-        this.properties = properties;
-        this.environment = environment;
+    @Bean
+    static BeanFactoryPostProcessor runtimeSafetyCheck(Environment environment) {
+        // Read Config Data before singleton initialization can run Flyway migrations.
+        return beanFactory -> validateConfiguration(environment);
     }
 
-    @Override
-    public void afterSingletonsInstantiated() {
-        // Runs before context refresh starts the web server lifecycle.
-        validate(properties.mode(), properties.orderingEnabled(), properties.demoResetEnabled(),
-                Arrays.stream(environment.getActiveProfiles()).collect(Collectors.toSet()));
+    private static void validateConfiguration(Environment environment) {
+        Set<String> profiles = Set.of(environment.getActiveProfiles());
+        if (profiles.isEmpty() && environment.matchesProfiles("demo")) {
+            profiles = Set.of(environment.getDefaultProfiles());
+        }
+
+        var binder = Binder.get(environment);
+        var properties = binder.bindOrCreate("foodie.runtime", FoodieEnvironmentProperties.class);
+        validate(properties.mode(), properties.orderingEnabled(), properties.demoResetEnabled(), profiles);
+
+        if (properties.mode() == RuntimeMode.PILOT) {
+            var locations = binder.bind("spring.flyway.locations", Bindable.listOf(String.class)).orElse(List.of());
+            if (!locations.equals(List.of("classpath:db/common"))) {
+                throw new IllegalStateException("Set spring.flyway.locations=classpath:db/common for PILOT mode.");
+            }
+        }
     }
 
     public static void validate(RuntimeMode mode, boolean orderingEnabled, boolean demoResetEnabled,

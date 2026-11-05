@@ -1,10 +1,15 @@
 package com.foodie.api.environment;
 
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
+import org.springframework.boot.flyway.autoconfigure.FlywayMigrationInitializer;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.core.env.SystemEnvironmentPropertySource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -88,11 +93,68 @@ class EnvironmentSafetyValidatorTest {
     }
 
     @Test
-    void defaultProfileDoesNotCountAsExplicitRuntimeSelection() {
+    void defaultDemoStartsWithOrderingDisabled() {
         runtime().run(context -> {
+            assertThat(context).hasNotFailed();
+            var properties = context.getBean(FoodieEnvironmentProperties.class);
+            assertThat(properties.mode()).isEqualTo(RuntimeMode.DEMO);
+            assertThat(properties.orderingEnabled()).isFalse();
+        });
+    }
+
+    @Test
+    void defaultPilotDoesNotReplaceExplicitActivation() {
+        runtime().withPropertyValues("spring.profiles.default=pilot").run(context -> {
             assertThat(context).hasFailed();
             assertThat(context.getStartupFailure()).hasMessageContaining("spring.profiles.active");
         });
+    }
+
+    @Test
+    void explicitProductionDoesNotFallBackToDemo() {
+        runtime("production").run(context -> {
+            assertThat(context).hasFailed();
+            assertThat(context.getStartupFailure()).hasMessageContaining("spring.profiles.active");
+        });
+    }
+
+    @Test
+    void conflictingProfilesFailBeforeFlywayMigration() {
+        var migrationRan = new AtomicBoolean();
+        withMigrationProbe(runtime("pilot", "demo", "production"), migrationRan).run(context -> {
+            assertThat(context).hasFailed();
+            assertThat(context.getStartupFailure()).hasMessageContaining("spring.profiles.active");
+            assertThat(migrationRan).isFalse();
+        });
+    }
+
+    @Test
+    void pilotDemoLocationOverrideFailsBeforeFlywayMigration() {
+        var migrationRan = new AtomicBoolean();
+        var pilotWithDemoLocations = runtime("pilot", "production").withInitializer(context ->
+                context.getEnvironment().getPropertySources().addFirst(new SystemEnvironmentPropertySource(
+                        "test-systemEnvironment", Map.of("SPRING_FLYWAY_LOCATIONS",
+                                "classpath:db/common,classpath:db/demo"))));
+        withMigrationProbe(pilotWithDemoLocations, migrationRan).run(context -> {
+            assertThat(context).hasFailed();
+            assertThat(context.getStartupFailure()).hasMessageContaining("spring.flyway.locations=classpath:db/common");
+            assertThat(migrationRan).isFalse();
+        });
+    }
+
+    @Test
+    void commonOnlyPilotReachesFlywayMigration() {
+        var migrationRan = new AtomicBoolean();
+        withMigrationProbe(runtime("pilot", "production"), migrationRan).run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThat(migrationRan).isTrue();
+        });
+    }
+
+    private static ApplicationContextRunner withMigrationProbe(ApplicationContextRunner runner,
+            AtomicBoolean migrationRan) {
+        return runner.withBean(FlywayMigrationInitializer.class, () -> new FlywayMigrationInitializer(
+                Flyway.configure().load(), flyway -> migrationRan.set(true)));
     }
 
     private static ApplicationContextRunner runtime(String... profiles) {

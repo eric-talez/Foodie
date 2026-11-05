@@ -15,7 +15,8 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Testcontainers
-@SpringBootTest(classes = FoodieApiApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(classes = FoodieApiApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "spring.profiles.active=demo")
 class FoodieApiApplicationTest {
 
     @Container

@@ -1,7 +1,7 @@
 # Foodie Investor Demo and South Bay Pilot Design
 
 **Date:** 2026-11-04
-**Status:** Pending approval
+**Status:** Approved
 **Scope:** One maintainable product that supports a polished investor/restaurant demo and an invite-only, live-payment South Bay pilot
 
 ## Intent

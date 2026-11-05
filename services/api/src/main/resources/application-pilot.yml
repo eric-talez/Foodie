@@ -1,3 +1,9 @@
 spring:
   flyway:
     locations: classpath:db/common
+
+foodie:
+  runtime:
+    mode: PILOT
+    ordering-enabled: false
+    demo-reset-enabled: false

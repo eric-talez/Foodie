@@ -59,7 +59,11 @@ docker compose down
 
 The browser uses same-origin `/api/v1/**` calls. No public browser environment variable or database credential is needed. E2E supplies its Next rewrite origin and obtains database credentials through `@ServiceConnection`; it does not use the Compose password or volume. Keep credentials out of Git and public assets.
 
-Local `demo` applies the schema and fictional seeds. For a deployed pilot, set `SPRING_PROFILES_ACTIVE=pilot,production` and provide all three `FOODIE_DB_*` variables for a separate pilot database. The API rejects `production` alone, mixed runtime profiles, and a pilot configured with demo migrations or reset enabled. Set `FOODIE_API_ORIGIN` to the pilot API's HTTP(S) origin before building the web app. Use only the scheme, host, and optional port. Changing the upstream requires a rebuild because the rewrite and the runtime descriptor lookup share the origin captured at build time.
+Local `demo` applies the schema and fictional seeds. For a deployed pilot, set `SPRING_PROFILES_ACTIVE=pilot,production` and provide all three `FOODIE_DB_*` variables for a separate pilot database. The API rejects `production` alone, mixed runtime profiles, and a pilot configured with demo migrations or reset enabled.
+
+When rolling back a pilot, use an API version that supports the demo/pilot migration profile split. Older versions can discover and apply fictional demo seeds to a pilot database that has only the common migrations.
+
+Set `FOODIE_API_ORIGIN` to the pilot API's HTTP(S) origin before building the web app. Use only the scheme, host, and optional port. Rebuild the matching web artifact whenever the upstream changes because the API rewrite and runtime descriptor lookup both use the origin captured at build time.
 
 `GET /api/v1/runtime` exposes only `mode` and `orderingEnabled`. The web server uses the mode for labels, including the **Demo** badge. If the response is unavailable or invalid, it falls back to demo labels with ordering disabled. Checkout stays preview-only regardless of the reported flag. The web security headers keep scripts, styles, and API calls on the app's origin, allow the inline code required by Next.js, block framing, and deny camera and microphone access. Geolocation is allowed only on the app's origin.
 

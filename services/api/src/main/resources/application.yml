@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: foodie-api
+  datasource:
+    url: ${FOODIE_DB_URL:jdbc:postgresql://localhost:5432/foodie}
+    username: ${FOODIE_DB_USER:foodie}
+    password: ${FOODIE_DB_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
+---
+spring:
+  config:
+    activate:
+      on-profile: production
+  datasource:
+    url: ${FOODIE_DB_URL}
+    username: ${FOODIE_DB_USER}
+    password: ${FOODIE_DB_PASSWORD}

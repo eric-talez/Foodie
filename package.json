@@ -1,0 +1,14 @@
+{
+  "name": "foodie",
+  "private": true,
+  "packageManager": "pnpm@12.17.0",
+  "engines": {
+    "node": "24.22.2"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @foodie/web dev",
+    "build": "pnpm --filter @foodie/web build",
+    "test": "pnpm --filter @foodie/web test",
+    "test:e2e": "pnpm --filter @foodie/web test:e2e"
+  }
+}

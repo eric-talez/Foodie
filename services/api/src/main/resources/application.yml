@@ -1,6 +1,8 @@
 spring:
   application:
     name: foodie-api
+  profiles:
+    default: demo
   datasource:
     url: ${FOODIE_DB_URL:jdbc:postgresql://localhost:5432/foodie}
     username: ${FOODIE_DB_USER:foodie}

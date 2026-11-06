@@ -54,10 +54,18 @@ docker compose down
 | `FOODIE_DB_URL` | API only | `jdbc:postgresql://localhost:5432/foodie` |
 | `FOODIE_DB_USER` | API only | `foodie` |
 | `FOODIE_DB_PASSWORD` | API / local Compose only | API defaults to empty; Compose requires a nonempty explicitly supplied value |
-| `FOODIE_API_ORIGIN` | Next server only | `http://localhost:8080`; target of the same-origin `/api/**` rewrite |
-| `SPRING_PROFILES_ACTIVE` | API | Default profile for local use; `production` requires all three database variables explicitly |
+| `FOODIE_API_ORIGIN` | Next.js | `http://localhost:8080`; upstream for API rewrites and runtime labels, captured at build time |
+| `SPRING_PROFILES_ACTIVE` | API | Unset for local `demo`; use `pilot,production` for a deployed pilot |
 
 The browser uses same-origin `/api/v1/**` calls. No public browser environment variable or database credential is needed. E2E supplies its Next rewrite origin and obtains database credentials through `@ServiceConnection`; it does not use the Compose password or volume. Keep credentials out of Git and public assets.
+
+Local `demo` applies the schema and fictional seeds. For a deployed pilot, set `SPRING_PROFILES_ACTIVE=pilot,production` and provide all three `FOODIE_DB_*` variables for a separate pilot database. The API rejects `production` alone, mixed runtime profiles, and a pilot configured with demo migrations or reset enabled.
+
+When rolling back a pilot, use an API version that supports the demo/pilot migration profile split. Older versions can discover and apply fictional demo seeds to a pilot database that has only the common migrations.
+
+Set `FOODIE_API_ORIGIN` to the pilot API's HTTP(S) origin before building the web app. Use only the scheme, host, and optional port. Rebuild the matching web artifact whenever the upstream changes because the API rewrite and runtime descriptor lookup both use the origin captured at build time.
+
+`GET /api/v1/runtime` exposes only `mode` and `orderingEnabled`. The web server uses the mode for labels, including the **Demo** badge. If the response is unavailable or invalid, it falls back to demo labels with ordering disabled. Checkout stays preview-only regardless of the reported flag. The web security headers keep scripts, styles, and API calls on the app's origin, allow the inline code required by Next.js, block framing, and deny camera and microphone access. Geolocation is allowed only on the app's origin.
 
 ## Validation
 
@@ -97,7 +105,7 @@ The six E2E cases exercise the actual seeded UI, including required customizatio
 ## Architecture and seed assumptions
 
 - `apps/web`: Next.js App Router / React / TypeScript; location discovery, restaurant detail, customizer, local cart, quote display, checkout preview. Vitest owns component tests; Playwright owns `tests/e2e`.
-- `services/api`: Java 21 / Spring Boot 4.1.2 modular monolith; catalog, local service area, integer-cent pricing, structured API errors. PostgreSQL 18.6 stores data, JPA reads it, Flyway applies `V1` schema and `V2` fictional seeds. Tests use Testcontainers.
+- `services/api`: Java 21 / Spring Boot 4.1.2 modular monolith; catalog, local service area, integer-cent pricing, structured API errors. PostgreSQL 18.6 stores data, JPA reads it, and Flyway applies the common schema and demo-only seeds per profile. Tests use Testcontainers.
 - `compose.yaml`: local PostgreSQL only, with a named volume. There is no deployment or additional container orchestration.
 
 Seeds have fixed UUIDs: four sample locations (three covered, San Francisco outside coverage), six fictional restaurants, 24 menu items, modifier choices, and one active demo fee policy. Santa Clara Central is the repeatable start point; Orchard Bowl Kitchen's Citrus Chicken Bowl costs $14.50 and requires one base. Choosing Brown rice adds no cost.
@@ -124,13 +132,13 @@ Start the API again to apply migrations and seeds. These reset commands are oper
 1. At desktop width and a narrow mobile viewport (for example 390px), check readable cards, menu, dialog, cart, and preview with no horizontal overflow or clipped controls.
 2. Choose Santa Clara Central. Verify Orchard's grouped card shows $6.99 / 45–60 min. Switch Direct and verify $11.49 / 25–35 min. Open a menu and use Back/Forward; location and mode must remain in the URL.
 3. Switch back to Grouped before opening Orchard's menu. Customize Citrus Chicken Bowl. Add must remain disabled until one required base is selected. Add Brown rice, review cart pricing, set quantity to two, and confirm the five separate server lines and $40.05 grouped total.
-4. Open checkout preview. Confirm **Demo pricing**, selected items, and **Ordering is not live yet**. There must be no payment collection or order submission control. Refresh preview and confirm it returns to cart for current pricing.
+4. Open checkout preview. In demo, confirm the **Demo** badge and **Demo pricing**. In a pilot with catalog data, confirm there is no demo wording and the quote is labeled **Estimated pricing**. Both modes must show selected items and **Ordering is not live yet**, with no payment collection or order submission control. Refresh preview and confirm it returns to cart for current pricing.
 5. Choose the San Francisco outside-coverage sample. Verify a clear coverage message, no restaurant cards, and a working location recovery link.
 6. Repeat location → menu → customizer → cart using Tab, arrows, Space, and Enter only. Check visible focus, dialog focus containment, Escape dismissal, restored trigger focus, and labelled quantity/removal controls.
 7. Block the quote endpoint or disconnect networking after filling the cart; change quantity. Verify saved items remain, official totals disappear, checkout is disabled, and retry succeeds after restoring networking. Clear or corrupt saved cart storage, reload, and verify recovery.
 
 ## Non-goals and security pin
 
-No accounts, authentication, subscription billing, live orders, payments, dispatch, driver/vendor portal, live geocoding/routing, or real customer address collection. No cross-tab cart synchronization or server cart persistence. This is a local demo, not a production service.
+No accounts, authentication, subscription billing, live orders, payments, dispatch, driver/vendor portal, live geocoding/routing, or real customer address collection. No cross-tab cart synchronization or server cart persistence. The deployed pilot is preview-only.
 
-The required **Next.js 16.4.0 pin produced a known-security-vulnerability warning during the initial build**. A later unchanged build passed; that does not resolve the warning. Review the package's current advisories and approve an upgrade before deployment. Task 10 retains the required version pin and does not add deployment/CI configuration.
+**Next.js 16.4.5 is the reviewed stable security release as of 2026-11-04**, replacing the 16.4.0 pin that produced a known-security-vulnerability warning during the initial build. Check current advisories again before deployment.

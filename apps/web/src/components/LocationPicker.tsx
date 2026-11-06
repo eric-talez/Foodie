@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useContext, useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "../lib/api";
+import { RuntimeModeContext } from "../lib/RuntimeModeContext";
 import type { LocationSummary } from "../lib/types";
 import { StatusMessage } from "./StatusMessage";
 
 export function LocationPicker() {
   const router = useRouter();
+  const isDemo = useContext(RuntimeModeContext) === "DEMO";
   const [locations, setLocations] = useState<LocationSummary[]>([]);
   const [locationId, setLocationId] = useState("");
   const [loading, setLoading] = useState(true);
@@ -37,9 +39,9 @@ export function LocationPicker() {
     <section className="location-card" aria-labelledby="location-heading">
       <p className="eyebrow">Start close to home</p>
       <h2 id="location-heading">Choose your location</h2>
-      <p id="location-help">Pick a sample delivery location to explore the demo. No address needed.</p>
+      <p id="location-help">{isDemo ? "Pick a sample delivery location to explore the demo." : "Choose a delivery location from the list."} No address needed.</p>
       <form onSubmit={continueToRestaurants}>
-        <label htmlFor="delivery-location">Demo delivery location</label>
+        <label htmlFor="delivery-location">{isDemo ? "Demo delivery location" : "Delivery location"}</label>
         <select id="delivery-location" value={locationId} required
           disabled={loading || !!error || !locations.length}
           aria-describedby="location-help location-status"
@@ -53,7 +55,7 @@ export function LocationPicker() {
         </select>
         <div id="location-status">
           <StatusMessage>
-            {loading ? "Loading locations…" : !error && !locations.length ? "No demo locations are available. Please try again later." : selected && !selected.inCoverage ? "This location is outside coverage. Delivery is unavailable; you can still view the coverage result." : ""}
+            {loading ? "Loading locations…" : !error && !locations.length ? `No ${isDemo ? "demo " : ""}locations are available. Please try again later.` : selected && !selected.inCoverage ? "This location is outside coverage. Delivery is unavailable; you can still view the coverage result." : ""}
           </StatusMessage>
           {error && <StatusMessage error>{error}</StatusMessage>}
         </div>

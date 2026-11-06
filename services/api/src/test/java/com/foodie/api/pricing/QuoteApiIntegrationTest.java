@@ -17,7 +17,7 @@ import tools.jackson.databind.json.JsonMapper;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Testcontainers
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "spring.profiles.active=demo")
 class QuoteApiIntegrationTest {
     @Container @ServiceConnection
     static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18.6");
